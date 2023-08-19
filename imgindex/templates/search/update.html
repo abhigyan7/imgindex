@@ -7,7 +7,7 @@
 {% block content %}
   <form method="post">
     <label for="taken">Taken</label>
-    <input name="taken" id="taken" type="date" value="{{ image['taken'] or request.form['taken'] }}" required />
+    <input name="taken" id="taken" type="date" value="{{ taken_rendered or request.form['taken'] }}" required />
 
     <label for="width">Width</label>
     <input name="width" id="width" type="number" step="1" value="{{ image['width'] or request.form['width'] }}" />

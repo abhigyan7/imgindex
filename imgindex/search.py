@@ -32,7 +32,7 @@ def index():
 def create():
     if request.method == 'POST':
         taken = datetime.datetime.strptime(request.form['taken'], "%Y-%m-%d")
-        width = request.form['taken']
+        width = request.form['width']
         height = request.form['height']
         file_size = request.form['file_size']
         owner = g.user['id']
@@ -69,6 +69,7 @@ def get_image(id, check_owner=True):
     if check_owner and image['owner'] != g.user['id']:
         abort(403)
 
+
     return image
 
 @bp.route('/<int:id>/update', methods=('GET', 'POST'))
@@ -78,7 +79,7 @@ def update(id):
 
     if request.method == 'POST':
         taken = request.form['taken']
-        width = request.form['taken']
+        width = request.form['width']
         height = request.form['height']
         file_size = request.form['file_size']
         owner = g.user['id']
@@ -97,7 +98,9 @@ def update(id):
             db.commit()
             return redirect(url_for('search.index'))
 
-    return render_template('search/update.html', image=image)
+    if image['taken'] is not None:
+        taken_rendered = datetime.datetime.strftime(image['taken'], "%Y-%m-%d")
+    return render_template('search/update.html', image=image, taken_rendered=taken_rendered)
 
 @bp.route('/<int:id>/delete', methods=('POST',))
 @login_required
