@@ -21,7 +21,7 @@
     <input type="submit" value="Save">
   </form>
   <hr>
-  <form action="{{ url_for('search.delete', id=image['owner']) }}" method="post">
+  <form action="{{ url_for('search.delete', id=image['id']) }}" method="post">
     <input class="danger" type="submit" value="Delete" onclick="return confirm('Are you sure?');">
   </form>
 {% endblock %}
