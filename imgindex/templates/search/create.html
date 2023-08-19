@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}New Image{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <form method="post">
+
+    <label for="taken">Taken</label>
+    <input name="taken" id="taken" type="date" value="{{ request.form['taken'] }}" required>
+
+    <label for="width">Width</label>
+    <input name="width" id="width" type="number" step="1">{{ request.form['body'] }} />
+
+    <label for="height">Height</label>
+    <input name="height" id="height" type="number" step="1">{{ request.form['body'] }} />
+
+    <label for="file_size">File size</label>
+    <input name="file_size" id="file_size" type="number" step="1">{{ request.form['body'] }} />
+
+    <input type="submit" value="Save">
+  </form>
+{% endblock %}
