@@ -1,20 +1,27 @@
 {% extends 'base.html' %}
 
 {% block header %}
-  <h1>{% block title %}Edit "{{ post['title'] }}"{% endblock %}</h1>
+  <h1>{% block title %}Edit "{{ image['id'] }}"{% endblock %}</h1>
 {% endblock %}
 
 {% block content %}
   <form method="post">
-    <label for="title">Title</label>
-    <input name="title" id="title"
-      value="{{ request.form['title'] or post['title'] }}" required>
-    <label for="body">Body</label>
-    <textarea name="body" id="body">{{ request.form['body'] or post['body'] }}</textarea>
+    <label for="taken">Taken</label>
+    <input name="taken" id="taken" type="date" value="{{ image['taken'] or request.form['taken'] }}" required />
+
+    <label for="width">Width</label>
+    <input name="width" id="width" type="number" step="1" value="{{ image['width'] or request.form['width'] }}" />
+
+    <label for="height">Height</label>
+    <input name="height" id="height" type="number" step="1" value="{{ image['height'] or request.form['height'] }}" />
+
+    <label for="file_size">File size</label>
+    <input name="file_size" id="file_size" type="number" step="1" value="{{ image['file_size'] or request.form['file_size'] }}" />
+
     <input type="submit" value="Save">
   </form>
   <hr>
-  <form action="{{ url_for('blog.delete', id=post['id']) }}" method="post">
+  <form action="{{ url_for('search.delete', id=image['owner']) }}" method="post">
     <input class="danger" type="submit" value="Delete" onclick="return confirm('Are you sure?');">
   </form>
 {% endblock %}

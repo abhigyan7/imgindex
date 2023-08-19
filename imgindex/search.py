@@ -59,22 +59,22 @@ def get_image(id, check_owner=True):
     image = get_db().execute(
         'SELECT i.id, created, taken, width, height, file_size, owner'
         ' FROM image i JOIN user u ON i.owner = u.id'
-        ' where u.id = ?',
+        ' where i.id = ?',
         (id,)
     ).fetchone()
 
     if image is None:
         abort(404, f"Image id {id} doesn't exist.")
 
-    if check_author and image['owner_id'] != g.user['id']:
+    if check_owner and image['owner'] != g.user['id']:
         abort(403)
 
-    return post
+    return image
 
 @bp.route('/<int:id>/update', methods=('GET', 'POST'))
 @login_required
 def update(id):
-    post = get_image(id)
+    image = get_image(id)
 
     if request.method == 'POST':
         taken = request.form['taken']
@@ -97,7 +97,7 @@ def update(id):
             db.commit()
             return redirect(url_for('search.index'))
 
-    return render_template('search/update.html', post=post)
+    return render_template('search/update.html', image=image)
 
 @bp.route('/<int:id>/delete', methods=('POST',))
 @login_required
