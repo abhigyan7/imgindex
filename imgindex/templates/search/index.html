@@ -9,17 +9,9 @@
 
 {% block content %}
   {% for image in images%}
-    <article class="post">
-      <header>
-        <div>
-          <h1>{{ image['created'] }}</h1>
-          <div class="about">by {{ image['username'] }} on {{ image['created'].strftime('%Y-%m-%d') }}</div>
-          </div>
-          {% if g.user['id'] == image['owner'] %}
-            <a class="action" href="{{ url_for('search.update', id=image['id']) }}">Edit</a>
-          {% endif %}
-      </header>
-    </article>
+    <div class="image-grid">
+      <img src="{{ url_for('static', filename=image['file_name']) }}" alt="image" class="image">
+    </div>
     {% if not loop.last %}
       <hr>
     {% endif %}

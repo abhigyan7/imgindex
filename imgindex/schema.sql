@@ -14,6 +14,7 @@ CREATE TABLE image (
   width INTEGER NOT NULL,
   height INTEGER NOT NULL,
   file_size INTEGER NOT NULL,
+  file_name TEXT NOT NULL,
   owner INTEGER NOT NULL,
   FOREIGN KEY (owner) REFERENCES user (id)
 );

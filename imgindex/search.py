@@ -4,12 +4,19 @@ from flask import (
     Blueprint, flash, g, redirect, render_template, request, url_for
 )
 
+from flask import current_app
+
+from werkzeug.utils import secure_filename
+
+from PIL import Image
+
 from werkzeug.exceptions import abort
 
 from imgindex.auth import login_required
 from imgindex.db import get_db
 
 import datetime
+import os
 
 bp = Blueprint('search', __name__)
 
@@ -18,26 +25,45 @@ bp = Blueprint('search', __name__)
 def index():
     db = get_db()
     images = db.execute(
-        'SELECT i.id, username, created, taken, width, height, file_size, owner'
+        'SELECT i.id, username, created, taken, width, height, file_size, file_name, owner'
         ' FROM image i JOIN user u ON i.owner = u.id'
         ' ORDER BY created DESC'
     ).fetchall()
 
-    print(images)
-
     return render_template('search/index.html', images=images)
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def save_image_file(image_file):
+    filename = secure_filename(image_file.filename)
+    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+    image_file.save(filepath)
+    return filepath
+
+def get_image_file_data(filename):
+    file_size = os.stat(filename).st_size
+    image = Image.open(filename)
+    width, height = image.size
+    return file_size, width, height
 
 @bp.route('/create', methods=('GET', 'POST'))
 @login_required
 def create():
     if request.method == 'POST':
-        taken = datetime.datetime.strptime(request.form['taken'], "%Y-%m-%d")
-        width = request.form['width']
-        height = request.form['height']
-        file_size = request.form['file_size']
+        try:
+            taken = datetime.datetime.strptime(request.form['taken'], "%Y-%m-%d")
+        except ValueError:
+            # the taken field is empty
+            taken = None
+        image_file = request.files['image_file']
         owner = g.user['id']
-
-        print(f"{taken}")
+        if image_file and allowed_file(image_file.filename):
+            file_name = save_image_file(image_file)
+            file_size, width, height = get_image_file_data(file_name)
+        else:
+            error = "Invalid file"
 
         error = None
 
@@ -46,9 +72,9 @@ def create():
         else:
             db = get_db()
             db.execute(
-                'INSERT INTO image (taken, width, height, file_size, owner)'
-                ' VALUES (?, ?, ?, ?, ?)',
-                (taken, width, height, file_size, owner)
+                'INSERT INTO image (taken, width, height, file_size, file_name, owner)'
+                ' VALUES (?, ?, ?, ?, ?, ?)',
+                (taken, width, height, file_size, file_name, owner)
             )
             db.commit()
             return redirect(url_for('search.index'))
@@ -57,7 +83,7 @@ def create():
 
 def get_image(id, check_owner=True):
     image = get_db().execute(
-        'SELECT i.id, created, taken, width, height, file_size, owner'
+        'SELECT i.id, created, taken, width, height, file_size, file_name, owner'
         ' FROM image i JOIN user u ON i.owner = u.id'
         ' where i.id = ?',
         (id,)
@@ -79,10 +105,8 @@ def update(id):
 
     if request.method == 'POST':
         taken = request.form['taken']
-        width = request.form['width']
-        height = request.form['height']
-        file_size = request.form['file_size']
         owner = g.user['id']
+        file_size, width, height = get_image_file_data(image['file_name'])
 
         error = None
 
@@ -100,12 +124,15 @@ def update(id):
 
     if image['taken'] is not None:
         taken_rendered = datetime.datetime.strftime(image['taken'], "%Y-%m-%d")
+    else:
+        taken_rendered = None
     return render_template('search/update.html', image=image, taken_rendered=taken_rendered)
 
 @bp.route('/<int:id>/delete', methods=('POST',))
 @login_required
 def delete(id):
-    get_image(id)
+    image = get_image(id)
+    os.remove(image['file_name'])
     db = get_db()
     db.execute('DELETE FROM image WHERE id = ?', (id,))
     db.commit()

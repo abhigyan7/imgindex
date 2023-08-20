@@ -5,10 +5,13 @@
 {% endblock %}
 
 {% block content %}
-  <form method="post">
+  <form method="post" enctype="multipart/form-data"">
 
     <label for="taken">Taken</label>
-    <input name="taken" id="taken" type="date" value="{{ request.form['taken'] }}" required>
+    <input name="taken" id="taken" type="date" value="{{ request.form['taken'] }}" >
+
+    <label for="image_file">Image</label>
+    <input name="image_file" id="image_file" type="file" accept="image/jpeg, image/png">
 
     <label for="width">Width</label>
     <input name="width" id="width" type="number" step="1" value="{{ request.form['width'] }}" />

@@ -39,6 +39,10 @@ def create_app(test_config=None):
 
     from . import search
     app.register_blueprint(search.bp)
+
     app.add_url_rule('/', endpoint='index')
+
+    UPLOAD_FOLDER = 'instance/uploads'
+    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
     return app

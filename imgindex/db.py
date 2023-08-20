@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sqlite3
+import os
 
 import click
 from flask import current_app, g
@@ -26,6 +27,7 @@ def init_db():
     db = get_db()
     with current_app.open_resource('schema.sql') as f:
         db.executescript(f.read().decode('utf-8'))
+    os.mkdir(f"{current_app.config['UPLOAD_FOLDER']}")
     return
 
 @click.command('init-db')
