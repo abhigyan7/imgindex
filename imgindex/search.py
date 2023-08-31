@@ -5,8 +5,9 @@ from flask import (
 )
 
 from flask import current_app
+from flask import send_file, send_from_directory
 
-from werkzeug.utils import secure_filename
+from werkzeug.utils import secure_filename, safe_join
 
 from PIL import Image
 
@@ -137,3 +138,9 @@ def delete(id):
     db.execute('DELETE FROM image WHERE id = ?', (id,))
     db.commit()
     return redirect(url_for('search.index'))
+
+@bp.route('/uploads/<id>')
+def send_uploaded_file(id):
+    image = get_image(id)
+    root_dir = os.getcwd()
+    return send_from_directory(root_dir, image['file_name'])

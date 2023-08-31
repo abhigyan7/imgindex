@@ -10,7 +10,7 @@
 {% block content %}
   {% for image in images%}
     <div class="image-grid">
-      <img src="{{ url_for('static', filename=image['file_name']) }}" alt="image" class="image">
+      <img src="{{ url_for('search.send_uploaded_file', id=image['id']) }}" alt="image" class="image" width="400">
     </div>
     {% if not loop.last %}
       <hr>
