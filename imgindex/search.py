@@ -16,6 +16,7 @@ from imgindex.db import get_db
 
 import datetime
 import os
+import json
 
 from PIL import Image
 import torch
@@ -30,9 +31,9 @@ class FakeModel():
     def __init__(self, *args):
         pass
     def encode_image(self, *args):
-        return np.random.randn(512)
+        return np.ones(shape=512)
     def encode_text(self, *args):
-        return np.random.randn(512)
+        return np.ones(shape=(1, 512))
 
 model = FakeModel()
 preprocess = lambda x: x
@@ -51,7 +52,20 @@ def index():
            ).fetchall()
         return render_template('search/index.html', images=images)
 
-    images = [] # TODO fill this
+    #query_embedding = model.encode_text(clip.tokenize([query])).to(device)
+    query_embedding = model.encode_text([query])[0]
+    query_embedding = json.dumps(query_embedding.tolist())
+    # current_app.logger.info(f"{query_embedding}")
+    images = db.execute(
+        "WITH matches as ("
+        "  SELECT rowid, distance FROM vss_image "
+        "  WHERE vss_search(image_embedding, ?) limit 20"
+        ")"
+        "SELECT i.id, created, taken, width, height, file_size, file_name, owner"
+                            " FROM matches JOIN image i ON i.rowid = matches.rowid",
+        [query_embedding] ).fetchall()
+    current_app.logger.info(f"{images=}")
+
     return render_template('search/index.html', images=images, query=query)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
