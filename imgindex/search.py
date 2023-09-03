@@ -9,8 +9,6 @@ from flask import send_file, send_from_directory
 
 from werkzeug.utils import secure_filename, safe_join
 
-from PIL import Image
-
 from werkzeug.exceptions import abort
 
 from imgindex.auth import login_required
@@ -18,74 +16,53 @@ from imgindex.db import get_db
 
 import datetime
 import os
+import json
+
+from PIL import Image
+import torch
+import clip
+import numpy as np
 
 import numpy as np
 
 bp = Blueprint('search', __name__)
+device = "cpu"
+model, preprocess = clip.load("ViT-B/32", device=device)
 
-sort_mode = np.array([False, False , False, False])
-
-@bp.route('/')
+@bp.route('/', methods=('GET', 'POST'))
 @login_required
-# def index():
-#     db = get_db()
-#     images = db.execute(
-#         'SELECT i.id, username, created, taken, width, height, file_size, file_name, owner'
-#         ' FROM image i JOIN user u ON i.owner = u.id'
-#         ' ORDER BY created ASC'
-#     ).fetchall()
-
-#     return render_template('search/index.html', images=images)
-
 def index():
     db = get_db()
-    sort_type = request.args.get('sort', 'date')
-    query = 'SELECT i.id, username, created, taken, width, height, file_size, file_name, owner'+' FROM image i JOIN user u ON i.owner = u.id'+' ORDER BY '
-    global sort_mode
+    query = request.form.get("query", "")
+    sort_type = request.form.get('sort', 'created')
+    sort_order = request.form.get('sort-order', 'DESC')
 
-    if np.logical_or.reduce(sort_mode) == True: s_mode = 'desc' 
-    else: s_mode = 'asc'
+    current_app.logger.info(f"{sort_type=}")
+    current_app.logger.info(f"{sort_order=}")
 
-    if sort_type == "date":
-        if sort_mode[0] == False:
-            sort_mode[0] = True
-            query += 'created ASC'
-        else:
-            sort_mode[0] = False
-            query += 'created DESC'
-        u_sort_mode = np.array([sort_mode[0], False, False, False])
-        sort_mode = u_sort_mode
-    elif sort_type == "size":
-        if sort_mode[1] == False:
-            sort_mode[1] = True
-            query += 'file_size ASC'
-        else:
-            sort_mode[1] = False
-            query += 'file_size DESC'
-        u_sort_mode = np.array([ False, sort_mode[1],False, False])
-        sort_mode = u_sort_mode
-    elif sort_type == "user":
-        if sort_mode[2] == False:
-            sort_mode[2] = True
-            query += 'owner ASC'
-        else:
-            sort_mode[2] = False
-            query += 'owner DESC'
-        u_sort_mode = np.array([ False, False, sort_mode[2], False])
-        sort_mode = u_sort_mode        
+    if query == "":
+        images = db.execute(
+            'SELECT i.id, username, created, taken, width, height, file_size, file_name, owner'
+            ' FROM image i JOIN user u ON i.owner = u.id'
+            ' ORDER BY {} {} ;'.format(sort_type, sort_order)
+           ).fetchall()
+        current_app.logger.info(f"{images=}")
+        return render_template('search/index.html', images=images, sort_type=sort_type, sort_order=sort_order)
 
-    elif sort_type == "name":
-        if sort_mode[3] == False:
-            sort_mode[3] = True
-            query += 'file_name ASC'
-        else:
-            sort_mode[3] = False
-            query += 'file_name DESC'
-        u_sort_mode = np.array([ False, False, False, sort_mode[3]])
-        sort_mode = u_sort_mode
- 
-    images = db.execute(query).fetchall()
-    return render_template('search/index.html', images=images, prev_sort_opt = sort_type, s_mode = s_mode)
+    query_embedding = model.encode_text(clip.tokenize([query])).to(device)[0]
+    query_embedding = json.dumps(query_embedding.tolist())
+    current_app.logger.info(f"{query_embedding}")
+    images = db.execute(
+        "WITH matches as ("
+        "  SELECT rowid, distance FROM vss_image "
+        "  WHERE vss_search(image_embedding, ?) limit 20"
+        ")"
+        "SELECT i.id, created, taken, width, height, file_size, file_name, owner"
+                            " FROM matches JOIN image i ON i.rowid = matches.rowid",
+        [query_embedding] ).fetchall()
+    current_app.logger.info(f"{images=}")
+
+    return render_template('search/index.html', images=images, query=query, sort_type=sort_type, sort_order=sort_order)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 def allowed_file(filename):
@@ -117,6 +94,9 @@ def create():
         if image_file and allowed_file(image_file.filename):
             file_name = save_image_file(image_file)
             file_size, width, height = get_image_file_data(file_name)
+            image_tensor = preprocess(Image.open(file_name)).unsqueeze(0).to(device)
+            with torch.no_grad():
+                image_features = model.encode_image(image_tensor).cpu().numpy()
         else:
             error = "Invalid file"
 
@@ -130,6 +110,24 @@ def create():
                 'INSERT INTO image (taken, width, height, file_size, file_name, owner)'
                 ' VALUES (?, ?, ?, ?, ?, ?)',
                 (taken, width, height, file_size, file_name, owner)
+            )
+            db.commit()
+            rowid = db.execute(
+                "select rowid from image where image_embedding is null limit 1"
+            ).fetchone()
+            if rowid is None:
+                current_app.logger.error(f"No image tuple with null embedding")
+            current_app.logger.info(f"{rowid=}")
+            db.execute(
+                'UPDATE image SET image_embedding = ? where rowid = ?',
+                [image_features[0].tobytes(), rowid[0]]
+            )
+            db.commit()
+            db.execute("DELETE FROM vss_image;")
+            db.commit()
+            db.execute(
+                "INSERT INTO vss_image (rowid, image_embedding)"
+                "  SELECT rowid, image_embedding from image;"
             )
             db.commit()
             return redirect(url_for('search.index'))

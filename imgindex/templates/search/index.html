@@ -3,16 +3,19 @@
 {% block header %}
   <h1>{% block title %}Images{% endblock %}</h1>
   {% if g.user %}
-    <!-- <a class="action" href="{{ url_for('search.index') }}">Sort</a> -->
-    <form action="" method="GET">
-      <label for="sort">Sort by:</label>
+    <form method="POST">
+      <input type="text" name="query" placeholder="Search...">
+      <button type="submit">Search</button>
       <select id="sort" name="sort">
-        <option value="size" {% if prev_sort_opt == 'size' %}selected{% endif %}>Size</option>
-        <option value="name" {% if prev_sort_opt == 'name' %}selected{% endif %}>Name</option>
-        <option value="date" {% if prev_sort_opt == 'date' %}selected{% endif %}>Date</option>
-        <option value="user" {% if prev_sort_opt == 'user' %}selected{% endif %}>User</option>
+        <option value="file_size" {% if sort_type=='file_size' %}selected{% endif %}> Size </option>
+        <option value="file_name" {% if sort_type=='file_name' %}selected{% endif %}> Name </option>
+        <option value="created"   {% if sort_type=='created'   %}selected{% endif %}> Date </option>
       </select>
-      <input type="submit" value="Sort ({{s_mode}})">
+      <select id="sort-order" name="sort-order">
+        <option value="ASC"  {% if sort_order=='ASC'  %}selected{% endif %}> Ascending  </option>
+        <option value="DESC" {% if sort_order=='DESC' %}selected{% endif %}> Descending </option>
+      </select>
+      <button type="submit">Sort</button>
     </form>
   {% endif %}
   {% if g.user %}
@@ -21,6 +24,9 @@
 {% endblock %}
 
 {% block content %}
+  {% if query %}
+    <h2>Search Results for "{{ query }}"</h2>
+  {% endif %}
   {% for image in images%}
     <div class="image-grid">
       <img src="{{ url_for('search.send_uploaded_file', id=image['id']) }}" alt="image" class="image" width="400">
