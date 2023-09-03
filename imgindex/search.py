@@ -25,18 +25,8 @@ import numpy as np
 
 bp = Blueprint('search', __name__)
 device = "cpu"
-#model, preprocess = clip.load("ViT-B/32", device=device)
+model, preprocess = clip.load("ViT-B/32", device=device)
 
-class FakeModel():
-    def __init__(self, *args):
-        pass
-    def encode_image(self, *args):
-        return np.ones(shape=512)
-    def encode_text(self, *args):
-        return np.ones(shape=(1, 512))
-
-model = FakeModel()
-preprocess = lambda x: x
 
 @bp.route('/', methods=('GET', 'POST'))
 @login_required
@@ -52,10 +42,9 @@ def index():
            ).fetchall()
         return render_template('search/index.html', images=images)
 
-    #query_embedding = model.encode_text(clip.tokenize([query])).to(device)
-    query_embedding = model.encode_text([query])[0]
+    query_embedding = model.encode_text(clip.tokenize([query])).to(device)[0]
     query_embedding = json.dumps(query_embedding.tolist())
-    # current_app.logger.info(f"{query_embedding}")
+    current_app.logger.info(f"{query_embedding}")
     images = db.execute(
         "WITH matches as ("
         "  SELECT rowid, distance FROM vss_image "
@@ -98,11 +87,9 @@ def create():
         if image_file and allowed_file(image_file.filename):
             file_name = save_image_file(image_file)
             file_size, width, height = get_image_file_data(file_name)
-            #image_tensor = preprocess(Image.open(file_name)).unsqueeze(0).to(device)
-            image_tensor = preprocess(Image.open(file_name))
+            image_tensor = preprocess(Image.open(file_name)).unsqueeze(0).to(device)
             with torch.no_grad():
-                #image_features = model.encode_image(image_tensor).cpu().numpy()
-                image_features = model.encode_image(image_tensor)
+                image_features = model.encode_image(image_tensor).cpu().numpy()
         else:
             error = "Invalid file"
 
