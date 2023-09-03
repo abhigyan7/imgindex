@@ -19,19 +19,73 @@ from imgindex.db import get_db
 import datetime
 import os
 
+import numpy as np
+
 bp = Blueprint('search', __name__)
+
+sort_mode = np.array([False, False , False, False])
 
 @bp.route('/')
 @login_required
+# def index():
+#     db = get_db()
+#     images = db.execute(
+#         'SELECT i.id, username, created, taken, width, height, file_size, file_name, owner'
+#         ' FROM image i JOIN user u ON i.owner = u.id'
+#         ' ORDER BY created ASC'
+#     ).fetchall()
+
+#     return render_template('search/index.html', images=images)
+
 def index():
     db = get_db()
-    images = db.execute(
-        'SELECT i.id, username, created, taken, width, height, file_size, file_name, owner'
-        ' FROM image i JOIN user u ON i.owner = u.id'
-        ' ORDER BY created DESC'
-    ).fetchall()
+    sort_type = request.args.get('sort', 'date')
+    query = 'SELECT i.id, username, created, taken, width, height, file_size, file_name, owner'+' FROM image i JOIN user u ON i.owner = u.id'+' ORDER BY '
+    global sort_mode
 
-    return render_template('search/index.html', images=images)
+    if np.logical_or.reduce(sort_mode) == True: s_mode = 'desc' 
+    else: s_mode = 'asc'
+
+    if sort_type == "date":
+        if sort_mode[0] == False:
+            sort_mode[0] = True
+            query += 'created ASC'
+        else:
+            sort_mode[0] = False
+            query += 'created DESC'
+        u_sort_mode = np.array([sort_mode[0], False, False, False])
+        sort_mode = u_sort_mode
+    elif sort_type == "size":
+        if sort_mode[1] == False:
+            sort_mode[1] = True
+            query += 'file_size ASC'
+        else:
+            sort_mode[1] = False
+            query += 'file_size DESC'
+        u_sort_mode = np.array([ False, sort_mode[1],False, False])
+        sort_mode = u_sort_mode
+    elif sort_type == "user":
+        if sort_mode[2] == False:
+            sort_mode[2] = True
+            query += 'owner ASC'
+        else:
+            sort_mode[2] = False
+            query += 'owner DESC'
+        u_sort_mode = np.array([ False, False, sort_mode[2], False])
+        sort_mode = u_sort_mode        
+
+    elif sort_type == "name":
+        if sort_mode[3] == False:
+            sort_mode[3] = True
+            query += 'file_name ASC'
+        else:
+            sort_mode[3] = False
+            query += 'file_name DESC'
+        u_sort_mode = np.array([ False, False, False, sort_mode[3]])
+        sort_mode = u_sort_mode
+ 
+    images = db.execute(query).fetchall()
+    return render_template('search/index.html', images=images, prev_sort_opt = sort_type, s_mode = s_mode)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 def allowed_file(filename):
@@ -144,3 +198,9 @@ def send_uploaded_file(id):
     image = get_image(id)
     root_dir = os.getcwd()
     return send_from_directory(root_dir, image['file_name'])
+
+        # images = db.execute(
+        #     'SELECT i.id, username, created, taken, width, height, file_size, file_name, owner'
+        #     ' FROM image i JOIN user u ON i.owner = u.id'
+        #     ' ORDER BY owner ASC'
+        # ).fetchall()

@@ -3,7 +3,20 @@
 {% block header %}
   <h1>{% block title %}Images{% endblock %}</h1>
   {% if g.user %}
-    <a class="action" href="{{ url_for('search.create') }}">New</a>
+    <!-- <a class="action" href="{{ url_for('search.index') }}">Sort</a> -->
+    <form action="" method="GET">
+      <label for="sort">Sort by:</label>
+      <select id="sort" name="sort">
+        <option value="size" {% if prev_sort_opt == 'size' %}selected{% endif %}>Size</option>
+        <option value="name" {% if prev_sort_opt == 'name' %}selected{% endif %}>Name</option>
+        <option value="date" {% if prev_sort_opt == 'date' %}selected{% endif %}>Date</option>
+        <option value="user" {% if prev_sort_opt == 'user' %}selected{% endif %}>User</option>
+      </select>
+      <input type="submit" value="Sort ({{s_mode}})">
+    </form>
+  {% endif %}
+  {% if g.user %}
+  <a class="action" href="{{ url_for('search.create') }}">New</a>
   {% endif %}
 {% endblock %}
 
@@ -11,6 +24,9 @@
   {% for image in images%}
     <div class="image-grid">
       <img src="{{ url_for('search.send_uploaded_file', id=image['id']) }}" alt="image" class="image" width="400">
+      <p>File Name: {{ image.file_name }}</p>
+      <p>File Size: {{ image.file_size }}</p>
+  
     </div>
     {% if not loop.last %}
       <hr>
