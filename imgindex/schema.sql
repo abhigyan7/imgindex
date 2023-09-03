@@ -16,5 +16,10 @@ CREATE TABLE image (
   file_size INTEGER NOT NULL,
   file_name TEXT NOT NULL,
   owner INTEGER NOT NULL,
+  image_embedding blob,
   FOREIGN KEY (owner) REFERENCES user (id)
+);
+
+CREATE VIRTUAL TABLE vss_image using vss0 (
+  image_embedding(512),
 );

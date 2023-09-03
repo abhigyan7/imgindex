@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import sqlite3
+import sqlite_vss
+
 import os
 
 import click
@@ -13,6 +15,8 @@ def get_db():
             detect_types=sqlite3.PARSE_DECLTYPES,
         )
         g.db.row_factory = sqlite3.Row
+        g.db.enable_load_extension(True)
+        sqlite_vss.load(g.db)
 
     return g.db
 

@@ -9,8 +9,6 @@ from flask import send_file, send_from_directory
 
 from werkzeug.utils import secure_filename, safe_join
 
-from PIL import Image
-
 from werkzeug.exceptions import abort
 
 from imgindex.auth import login_required
@@ -19,7 +17,22 @@ from imgindex.db import get_db
 import datetime
 import os
 
+from PIL import Image
+import torch
+import clip
+import numpy as np
+
 bp = Blueprint('search', __name__)
+device = "cpu"
+#model, preprocess = clip.load("ViT-B/32", device=device)
+
+class FakeModel():
+    def __init__(self, *args):
+        pass
+    def encode_image(self, *args):
+        return np.random.randn(512)
+model = FakeModel()
+preprocess = lambda x: x
 
 @bp.route('/')
 @login_required
@@ -63,6 +76,11 @@ def create():
         if image_file and allowed_file(image_file.filename):
             file_name = save_image_file(image_file)
             file_size, width, height = get_image_file_data(file_name)
+            #image_tensor = preprocess(Image.open(file_name)).unsqueeze(0).to(device)
+            image_tensor = preprocess(Image.open(file_name))
+            with torch.no_grad():
+                #image_features = model.encode_image(image_tensor).cpu().numpy()
+                image_features = model.encode_image(image_tensor)
         else:
             error = "Invalid file"
 
@@ -76,6 +94,24 @@ def create():
                 'INSERT INTO image (taken, width, height, file_size, file_name, owner)'
                 ' VALUES (?, ?, ?, ?, ?, ?)',
                 (taken, width, height, file_size, file_name, owner)
+            )
+            db.commit()
+            rowid = db.execute(
+                "select rowid from image where image_embedding is null limit 1"
+            ).fetchone()
+            if rowid is None:
+                current_app.logger.error(f"No image tuple with null embedding")
+            current_app.logger.info(f"{rowid=}")
+            db.execute(
+                'UPDATE image SET image_embedding = ? where rowid = ?',
+                [image_features[0].tobytes(), rowid[0]]
+            )
+            db.commit()
+            db.execute("DELETE FROM vss_image;")
+            db.commit()
+            db.execute(
+                "INSERT INTO vss_image (rowid, image_embedding)"
+                "  SELECT rowid, image_embedding from image;"
             )
             db.commit()
             return redirect(url_for('search.index'))
