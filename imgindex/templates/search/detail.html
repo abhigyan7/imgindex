@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Edit "{{ image['id'] }}"{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <img src="{{ url_for('search.send_uploaded_file', id=image['id']) }}" alt="image" class="image" width="400">
+  <p>File Name: {{ image.file_name }}</p>
+  <p>File Size: {{ image.file_size }}</p>
+  <form action="{{ url_for('search.delete', id=image['id']) }}" method="post">
+    <input class="danger" type="submit" value="Delete" onclick="return confirm('Are you sure?');">
+  </form>
+  <hr>
+{% endblock %}

@@ -42,7 +42,7 @@ def index():
 
     if query == "":
         images = db.execute(
-            'SELECT i.id, username, created, taken, width, height, file_size, file_name, owner'
+            'SELECT i.id, username, created, width, height, file_size, file_name, owner'
             ' FROM image i JOIN user u ON i.owner = u.id'
             ' ORDER BY {} {} ;'.format(sort_type, sort_order)
            ).fetchall()
@@ -57,7 +57,7 @@ def index():
         "  SELECT rowid, distance FROM vss_image "
         "  WHERE vss_search(image_embedding, ?) limit 20"
         ")"
-        "SELECT i.id, created, taken, width, height, file_size, file_name, owner"
+        "SELECT i.id, created, width, height, file_size, file_name, owner"
                             " FROM matches JOIN image i ON i.rowid = matches.rowid",
         [query_embedding] ).fetchall()
     current_app.logger.info(f"{images=}")
@@ -84,13 +84,9 @@ def get_image_file_data(filename):
 @login_required
 def create():
     if request.method == 'POST':
-        try:
-            taken = datetime.datetime.strptime(request.form['taken'], "%Y-%m-%d")
-        except ValueError:
-            # the taken field is empty
-            taken = None
         image_file = request.files['image_file']
         owner = g.user['id']
+        error = None
         if image_file and allowed_file(image_file.filename):
             file_name = save_image_file(image_file)
             file_size, width, height = get_image_file_data(file_name)
@@ -100,16 +96,14 @@ def create():
         else:
             error = "Invalid file"
 
-        error = None
-
         if error is not None:
             flash(error)
         else:
             db = get_db()
             db.execute(
-                'INSERT INTO image (taken, width, height, file_size, file_name, owner)'
-                ' VALUES (?, ?, ?, ?, ?, ?)',
-                (taken, width, height, file_size, file_name, owner)
+                'INSERT INTO image (width, height, file_size, file_name, owner)'
+                ' VALUES (?, ?, ?, ?, ?)',
+                (width, height, file_size, file_name, owner)
             )
             db.commit()
             rowid = db.execute(
@@ -136,7 +130,7 @@ def create():
 
 def get_image(id, check_owner=True):
     image = get_db().execute(
-        'SELECT i.id, created, taken, width, height, file_size, file_name, owner'
+        'SELECT i.id, created, width, height, file_size, file_name, owner'
         ' FROM image i JOIN user u ON i.owner = u.id'
         ' where i.id = ?',
         (id,)
@@ -148,38 +142,13 @@ def get_image(id, check_owner=True):
     if check_owner and image['owner'] != g.user['id']:
         abort(403)
 
-
     return image
 
-@bp.route('/<int:id>/update', methods=('GET', 'POST'))
+@bp.route('/<int:id>/detail', methods=('GET', 'POST'))
 @login_required
-def update(id):
+def detail(id):
     image = get_image(id)
-
-    if request.method == 'POST':
-        taken = request.form['taken']
-        owner = g.user['id']
-        file_size, width, height = get_image_file_data(image['file_name'])
-
-        error = None
-
-        if error is not None:
-            flash(error)
-        else:
-            db = get_db()
-            db.execute(
-                'UPDATE image SET taken= ?, width= ?, height= ?, file_size= ?, owner= ?'
-                ' WHERE id = ?',
-                (taken, width, height, file_size, owner, id)
-            )
-            db.commit()
-            return redirect(url_for('search.index'))
-
-    if image['taken'] is not None:
-        taken_rendered = datetime.datetime.strftime(image['taken'], "%Y-%m-%d")
-    else:
-        taken_rendered = None
-    return render_template('search/update.html', image=image, taken_rendered=taken_rendered)
+    return render_template('search/detail.html', image=image)
 
 @bp.route('/<int:id>/delete', methods=('POST',))
 @login_required
@@ -198,7 +167,7 @@ def send_uploaded_file(id):
     return send_from_directory(root_dir, image['file_name'])
 
         # images = db.execute(
-        #     'SELECT i.id, username, created, taken, width, height, file_size, file_name, owner'
+        #     'SELECT i.id, username, created, width, height, file_size, file_name, owner'
         #     ' FROM image i JOIN user u ON i.owner = u.id'
         #     ' ORDER BY owner ASC'
         # ).fetchall()

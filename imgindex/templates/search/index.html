@@ -29,10 +29,9 @@
   {% endif %}
   {% for image in images%}
     <div class="image-grid">
-      <img src="{{ url_for('search.send_uploaded_file', id=image['id']) }}" alt="image" class="image" width="400">
-      <p>File Name: {{ image.file_name }}</p>
-      <p>File Size: {{ image.file_size }}</p>
-  
+      <a href="{{ url_for('search.detail', id=image['id']) }}">
+        <img src="{{ url_for('search.send_uploaded_file', id=image['id']) }}" alt="image" class="image" width="400">
+      </a>
     </div>
     {% if not loop.last %}
       <hr>

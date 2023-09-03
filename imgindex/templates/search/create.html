@@ -7,20 +7,8 @@
 {% block content %}
   <form method="post" enctype="multipart/form-data"">
 
-    <label for="taken">Taken</label>
-    <input name="taken" id="taken" type="date" value="{{ request.form['taken'] }}" >
-
     <label for="image_file">Image</label>
     <input name="image_file" id="image_file" type="file" accept="image/jpeg, image/png">
-
-    <label for="width">Width</label>
-    <input name="width" id="width" type="number" step="1" value="{{ request.form['width'] }}" />
-
-    <label for="height">Height</label>
-    <input name="height" id="height" type="number" step="1" value="{{ request.form['height'] }}" />
-
-    <label for="file_size">File size</label>
-    <input name="file_size" id="file_size" type="number" step="1" value="{{ request.form['file_size'] }}" />
 
     <input type="submit" value="Save">
   </form>
