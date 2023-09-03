@@ -8,6 +8,13 @@
 {% endblock %}
 
 {% block content %}
+  <form method="POST">
+    <input type="text" name="query" placeholder="Search...">
+    <button type="submit">Search</button>
+  </form>
+  {% if query %}
+    <h2>Search Results for "{{ query }}"</h2>
+  {% endif %}
   {% for image in images%}
     <div class="image-grid">
       <img src="{{ url_for('search.send_uploaded_file', id=image['id']) }}" alt="image" class="image" width="400">

@@ -31,20 +31,28 @@ class FakeModel():
         pass
     def encode_image(self, *args):
         return np.random.randn(512)
+    def encode_text(self, *args):
+        return np.random.randn(512)
+
 model = FakeModel()
 preprocess = lambda x: x
 
-@bp.route('/')
+@bp.route('/', methods=('GET', 'POST'))
 @login_required
 def index():
     db = get_db()
-    images = db.execute(
-        'SELECT i.id, username, created, taken, width, height, file_size, file_name, owner'
-        ' FROM image i JOIN user u ON i.owner = u.id'
-        ' ORDER BY created DESC'
-    ).fetchall()
+    query = request.form.get("query", "")
 
-    return render_template('search/index.html', images=images)
+    if query == "":
+        images = db.execute(
+            'SELECT i.id, username, created, taken, width, height, file_size, file_name, owner'
+            ' FROM image i JOIN user u ON i.owner = u.id'
+            ' ORDER BY created DESC'
+           ).fetchall()
+        return render_template('search/index.html', images=images)
+
+    images = [] # TODO fill this
+    return render_template('search/index.html', images=images, query=query)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 def allowed_file(filename):
